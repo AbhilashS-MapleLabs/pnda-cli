@@ -79,6 +79,8 @@ def get_node_counts(deployment_target, live_only):
 def check_config_file():
     if not os.path.exists('pnda_env.yaml'):
         CONSOLE.error('Missing required pnda_env.yaml config file, make a copy of pnda_env_example.yaml named pnda_env.yaml, fill it out and try again.')
+        if not os.path.exists('pnda_cloud_infra.yaml'):
+            CONSOLE.error('Missing required pnda_cloud_infra.yaml config file, make a copy of pnda_cloud_infra_example.yaml named pnda_cloud_infra.yaml, fill it out and try again.')
         sys.exit(1)
 
 def write_pnda_env_sh(cluster):
@@ -108,12 +110,12 @@ def select_deployment_target_impl(fields):
         fields['kafka_nodes'] = node_counts['kafka']
         fields['zk_nodes'] = node_counts['zk']
     else:
-        os.environ['AWS_ACCESS_KEY_ID'] = PNDA_ENV['ec2_access']['AWS_ACCESS_KEY_ID']
-        os.environ['AWS_SECRET_ACCESS_KEY'] = PNDA_ENV['ec2_access']['AWS_SECRET_ACCESS_KEY']
+        os.environ['AWS_ACCESS_KEY_ID'] = PNDA_ENV['aws_parameters']['AWS_ACCESS_KEY_ID']
+        os.environ['AWS_SECRET_ACCESS_KEY'] = PNDA_ENV['aws_parameters']['AWS_SECRET_ACCESS_KEY']
         print 'Using ec2 credentials:'
-        print '  AWS_REGION = %s' % PNDA_ENV['ec2_access']['AWS_REGION']
-        print '  AWS_ACCESS_KEY_ID = %s' % PNDA_ENV['ec2_access']['AWS_ACCESS_KEY_ID']
-        print '  AWS_SECRET_ACCESS_KEY = %s' % PNDA_ENV['ec2_access']['AWS_SECRET_ACCESS_KEY']
+        print '  AWS_REGION = %s' % PNDA_ENV['aws_parameters']['AWS_REGION']
+        print '  AWS_ACCESS_KEY_ID = %s' % PNDA_ENV['aws_parameters']['AWS_ACCESS_KEY_ID']
+        print '  AWS_SECRET_ACCESS_KEY = %s' % PNDA_ENV['aws_parameters']['AWS_SECRET_ACCESS_KEY']
         if not os.path.isfile('git.pem'):
             with open('git.pem', 'w') as git_key_file:
                 git_key_file.write('If authenticated access to the platform-salt git repository is required then' +
@@ -125,6 +127,21 @@ def select_deployment_target_impl(fields):
             PNDA_ENV, fields['pnda_cluster'], fields["no_config_check"], fields['flavor'], fields['keyname'], fields['branch'], fields['dry_run'])
     return deployment_target
 
+def merge_dicts(pnda_env,target_env):
+    target_platform=target_env['cloud_infrastructure']['CLOUD_INFRASTRUCTURE_TYPE']
+    
+    section_list=['cloud_infrastructure']
+    
+    if target_platform == 'aws':
+	section_list.append('aws_parameters')
+    elif target_platform == 'openstack':
+        section_list.append('openstack_parameters')
+    elif target_platform == 'existing-machines':
+        section_list.append('existing_machines_parameters')
+    for section in section_list:
+        if section in target_env:
+            pnda_env[section]=target_env[section]
+    
 def main():
     print 'Saving debug log to %s' % LOG_FILE_NAME
 
@@ -147,9 +164,17 @@ def main():
     ###
 
     global PNDA_ENV
+    global TARGET_ENV
     check_config_file()
     with open('pnda_env.yaml', 'r') as infile:
         PNDA_ENV = yaml.load(infile)
+    with open('pnda_cloud_infra.yaml', 'r') as infile_target:
+        TARGET_ENV = yaml.load(infile_target)
+
+    target_platform=TARGET_ENV['cloud_infrastructure']['CLOUD_INFRASTRUCTURE_TYPE']
+    #TODO: validate target_platform options
+
+    merge_dicts(PNDA_ENV,TARGET_ENV)
 
     es_fields = {
         "elk_es_master":PNDA_ENV['elk-cluster']['MASTER_NODES'],
