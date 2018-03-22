@@ -92,23 +92,11 @@ openstack_parameters:
   # Address of gateway for Kakfa interface on private subnet
   privateSubnetGateway: 10.0.1.1
 
-  # The first available IP address on the private network
-  PRIVATE_SUBNET_POOL_START: 10.0.1.10
-
-  # The last available IP address on the private network
-  PRIVATE_SUBNET_POOL_END: 10.0.1.250
-
   # CIDR specifying the address range for the public producer subnet (Kafka ingress)
   publicProducerSubnetCidr: 10.0.2.0/24
 
   # Address of gateway for Kakfa interface on public producer subnet
   publicProducerSubnetGateway: 10.0.2.1
-
-  # The first available IP address on the producer network
-  PUBLIC_PRODUCER_SUBNET_POOL_START: 10.0.2.10
-
-  # The last available IP address on the producer network
-  PUBLIC_PRODUCER_SUBNET_POOL_END: 10.0.2.250
 
 existing_machines_parameters:
   #Below 2 variables used in package_install.sh for offline mode
@@ -140,6 +128,7 @@ pnda_application_repo:
   #   s3     - AWS S3. Also set PNDA_APPS_CONTAINER, PNDA_APPS_FOLDER, PNDA_APPS_REGION, PNDA_APPS_ACCESS_KEY_ID, PNDA_APPS_SECRET_ACCESS_KEY
   #   sshfs  - standard file system. Also set PR_FS_LOCATION_PATH, PR_SSHFS_USER, PR_SSHFS_HOST, PR_SSHFS_PATH and PR_SSHFS_KEY
   #   local  - local filesystem on the package repository service server. Also set PR_FS_LOCATION_PATH.
+  #   swift  - Openstack swift. Also set pnda_apps_container and pnda_apps_folder
   PR_FS_TYPE: s3
 
   # S3 container to use for PNDA application packages
