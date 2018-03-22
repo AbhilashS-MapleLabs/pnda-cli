@@ -305,7 +305,7 @@ class CloudFormationBackend(BaseBackend):
         conn = boto.cloudformation.connect_to_region(region)
         if conn is None:
             CONSOLE.info('AWS connection... ERROR')
-            CONSOLE.error('Failed to connect to cloud formation API, verify aws_parameters settings in "pnda_cloud_infra.yaml" and try again.')
+            CONSOLE.error('Failed to connect to cloud formation API, verify aws_parameters settings in "pnda_env.yaml" and try again.')
             sys.exit(1)
 
         try:
@@ -313,6 +313,6 @@ class CloudFormationBackend(BaseBackend):
             CONSOLE.info('AWS connection... OK')
         except:
             CONSOLE.info('AWS connection... ERROR')
-            CONSOLE.error('Failed to query cloud formation API, verify aws_parameters settings in "pnda_cloud_infra.yaml" and try again.')
+            CONSOLE.error('Failed to query cloud formation API, verify aws_parameters settings in "pnda_env.yaml" and try again.')
             CONSOLE.error(traceback.format_exc())
             sys.exit(1)
