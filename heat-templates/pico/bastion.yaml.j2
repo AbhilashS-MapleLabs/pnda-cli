@@ -1,0 +1,84 @@
+# Definition for the bastion instance type
+# Specifies which bootstrap script to run to set up this instance type
+heat_template_version: 2015-04-30
+
+parameters:
+  signal_transport:
+    type: string
+    default: TEMP_URL_SIGNAL
+  software_config_transport:
+    type: string
+    default: POLL_TEMP_URL
+  Flavor:
+    description: Flavor of the bastion server
+    type: string
+    default: ec2.t2.medium
+  Image:
+    type: string
+  KeyName:
+    description: Name of an existing ssh keypair
+    type: string
+  name:
+    type: string
+  pnda_private_network:
+    description: Private network for pnda deployment
+    type: string
+  pnda_private_subnet:
+    description: Private network for pnda deployment
+    type: string
+  public_net_id:
+    description: Private network for pnda deployment
+    type: string
+  pnda_security_group_pnda:
+    type: string
+  cluster_name:
+    type: string
+  pnda_flavor:
+    type: string
+    default: standard
+  os_user:
+    type: string
+
+resources:
+  bastion_sec_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: Bastion SecurityGroup
+      name:
+        str_replace:
+          template: '%cname%-bastion'
+          params :
+            '%cname%': { get_param: cluster_name }
+      rules:
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: icmp
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+
+  bastion_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: pnda_private_network }
+      fixed_ips:
+        - subnet_id: { get_param: pnda_private_subnet }
+      security_groups: [{ get_resource: bastion_sec_group },{ get_param: pnda_security_group_pnda }]
+
+  floatingIP:
+    type: OS::Neutron::FloatingIP
+    depends_on: [ bastion_port ]
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: bastion_port}
+
+  bastion_server:
+    type: OS::Nova::Server
+    depends_on: floatingIP
+    properties:
+      name: { get_param: name }
+      image: { get_param: Image }
+      flavor: { get_param: Flavor}
+      key_name: { get_param: KeyName }
+      networks:
+        - port: { get_resource: bastion_port }

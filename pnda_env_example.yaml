@@ -98,6 +98,11 @@ openstack_parameters:
   # Address of gateway for Kakfa interface on public producer subnet
   publicProducerSubnetGateway: 10.0.2.1
 
+  KeyName: keyname
+
+  #List of name name servers
+  dns_nameservers: [ "8.8.8.8" ]
+
 existing_machines_parameters:
   #Below 2 variables used in package_install.sh for offline mode
 

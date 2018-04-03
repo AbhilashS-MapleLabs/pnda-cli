@@ -29,6 +29,7 @@ import yaml
 from validation import UserInputValidator
 from backend_cloud_formation import CloudFormationBackend
 from backend_existing_machines import ExistingMachinesBackend
+from backend_heat_templates import HeatTemplateBackend
 
 utils.init_logging()
 CONSOLE = utils.CONSOLE_LOGGER
@@ -107,13 +108,7 @@ def select_deployment_target_impl(fields):
         fields['opentsdb_nodes'] = node_counts['opentsdb']
         fields['kafka_nodes'] = node_counts['kafka']
         fields['zk_nodes'] = node_counts['zk']
-    elif PNDA_ENV['cloud_infrastructure']['CLOUD_INFRASTRUCTURE_TYPE'] == 'aws':
-        os.environ['AWS_ACCESS_KEY_ID'] = PNDA_ENV['aws_parameters']['AWS_ACCESS_KEY_ID']
-        os.environ['AWS_SECRET_ACCESS_KEY'] = PNDA_ENV['aws_parameters']['AWS_SECRET_ACCESS_KEY']
-        print 'Using ec2 credentials:'
-        print '  AWS_REGION = %s' % PNDA_ENV['aws_parameters']['AWS_REGION']
-        print '  AWS_ACCESS_KEY_ID = %s' % PNDA_ENV['aws_parameters']['AWS_ACCESS_KEY_ID']
-        print '  AWS_SECRET_ACCESS_KEY = %s' % PNDA_ENV['aws_parameters']['AWS_SECRET_ACCESS_KEY']
+    else:
         if not os.path.isfile('git.pem'):
             with open('git.pem', 'w') as git_key_file:
                 git_key_file.write('If authenticated access to the platform-salt git repository is required then' +
@@ -121,10 +116,23 @@ def select_deployment_target_impl(fields):
                                    'Set PLATFORM_GIT_REPO_HOST and PLATFORM_GIT_REPO_URI in pnda_env.yaml, for example:\n' +
                                    'PLATFORM_GIT_REPO_HOST: github.com\n' +
                                    'PLATFORM_GIT_REPO_URI: git@github.com:pndaproject/platform-salt.git\n')
-        deployment_target = CloudFormationBackend(
-            PNDA_ENV, fields['pnda_cluster'], fields["no_config_check"], fields['flavor'], fields['keyname'], fields['branch'], fields['dry_run'])
-    elif PNDA_ENV['cloud_infrastructure']['CLOUD_INFRASTRUCTURE_TYPE'] == 'openstack':
-        print 'selectiion is openstack target'
+        if  PNDA_ENV['cloud_infrastructure']['CLOUD_INFRASTRUCTURE_TYPE'] == 'aws':
+            os.environ['AWS_ACCESS_KEY_ID'] = PNDA_ENV['aws_parameters']['AWS_ACCESS_KEY_ID']
+            os.environ['AWS_SECRET_ACCESS_KEY'] = PNDA_ENV['aws_parameters']['AWS_SECRET_ACCESS_KEY']
+            print 'Using ec2 credentials:'
+            print '  AWS_REGION = %s' % PNDA_ENV['aws_parameters']['AWS_REGION']
+            print '  AWS_ACCESS_KEY_ID = %s' % PNDA_ENV['aws_parameters']['AWS_ACCESS_KEY_ID']
+            print '  AWS_SECRET_ACCESS_KEY = %s' % PNDA_ENV['aws_parameters']['AWS_SECRET_ACCESS_KEY']
+
+            deployment_target = CloudFormationBackend(
+                PNDA_ENV, fields['pnda_cluster'], fields["no_config_check"], fields['flavor'], fields['keyname'], fields['branch'], fields['dry_run'])
+        elif PNDA_ENV['cloud_infrastructure']['CLOUD_INFRASTRUCTURE_TYPE'] == 'openstack':
+            print 'selectiion is openstack target'
+            print '  KEYSTONE_USER = %s' % PNDA_ENV['openstack_parameters']['KEYSTONE_USER']
+            print '  KEYSTONE_TENANT = %s' % PNDA_ENV['openstack_parameters']['KEYSTONE_TENANT']
+            print '  KEYSTONE_AUTH_URL = %s' % PNDA_ENV['openstack_parameters']['KEYSTONE_AUTH_URL']
+            deployment_target = HeatTemplateBackend(
+                PNDA_ENV, fields['pnda_cluster'], fields["no_config_check"], fields['flavor'], fields['keyname'], fields['branch'], fields['dry_run'])
     return deployment_target
 
 def main():
