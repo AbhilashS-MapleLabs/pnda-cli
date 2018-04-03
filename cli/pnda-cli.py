@@ -27,6 +27,7 @@ import pnda_cli_utils as utils
 from validation import UserInputValidator
 from backend_cloud_formation import CloudFormationBackend
 from backend_existing_machines import ExistingMachinesBackend
+from backend_heat_templates import HeatTemplateBackend
 
 utils.init_logging()
 CONSOLE = utils.CONSOLE_LOGGER
@@ -80,7 +81,7 @@ def check_config_file():
         sys.exit(1)
 
 def write_pnda_env_sh(cluster):
-    client_only = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'PLATFORM_GIT_BRANCH']
+    client_only = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'PLATFORM_GIT_BRANCH','KEYSTONE_PASSWORD']
     with open('cli/pnda_env_%s.sh' % cluster, 'w') as pnda_env_sh_file:
         for section in PNDA_ENV:
             for setting in PNDA_ENV[section]:
@@ -95,6 +96,7 @@ def valid_flavors():
     return list(set(cfn_dirs + bootstap_dirs))
 
 def select_deployment_target_impl(fields):
+
     if fields['x_machines_definition'] is not None:
         exclude_sections= ['aws_parameters','openstack_parameters']
         CONSOLE.info('Installing to existing infra, defined in %s', fields['x_machines_definition'])
@@ -122,6 +124,14 @@ def select_deployment_target_impl(fields):
                                    'PLATFORM_GIT_REPO_HOST: github.com\n' +
                                    'PLATFORM_GIT_REPO_URI: git@github.com:pndaproject/platform-salt.git\n')
         deployment_target = CloudFormationBackend(
+            PNDA_ENV, fields['pnda_cluster'], fields["no_config_check"], fields['flavor'], fields['keyname'], fields['branch'], fields['dry_run'])
+    elif PNDA_ENV['infrastructure']['INFRASTRUCTURE_TYPE'] == 'openstack':
+        exclude_sections= ['aws_parameters','existing_machines_parameters']
+        print 'selectiion is openstack target'
+        print '  KEYSTONE_USER = %s' % PNDA_ENV['openstack_parameters']['KEYSTONE_USER']
+        print '  KEYSTONE_TENANT = %s' % PNDA_ENV['openstack_parameters']['KEYSTONE_TENANT']
+        print '  KEYSTONE_AUTH_URL = %s' % PNDA_ENV['openstack_parameters']['KEYSTONE_AUTH_URL']
+        deployment_target = HeatTemplateBackend(
             PNDA_ENV, fields['pnda_cluster'], fields["no_config_check"], fields['flavor'], fields['keyname'], fields['branch'], fields['dry_run'])
     else:
         CONSOLE.error('Invalid cloud infra type')

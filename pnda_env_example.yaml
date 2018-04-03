@@ -50,7 +50,11 @@ aws_parameters:
   publicProducerSubnetGateway: 10.0.2.1
 
 openstack_parameters:
- # KEYSTONE_USER: Username for the openstack clients to use
+  # keystone_auth_url: Keystone authentication URL. The Openstack console provides this
+  # under the Access & Security section.
+  KEYSTONE_AUTH_URL: 'http://x.x.x.x:5000/v2.0'
+
+  # keystone_user: Username for the openstack clients to use
   KEYSTONE_USER: username
 
   # KEYSTONE_PASSWORD: Password for the openstack clients to use
@@ -68,7 +72,7 @@ openstack_parameters:
   # under the Access & Security section.
   KEYSTONE_AUTH_VERSION: '2'
 
-  # KEYSTONE_REGION_NAME: Keystone region. The Openstack console provides this
+  # keystone_region_name: Keystone region. The Openstack console provides this
   # under the Access & Security section.
   KEYSTONE_REGION_NAME: RegionOne
 
