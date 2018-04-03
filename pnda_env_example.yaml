@@ -50,7 +50,7 @@ aws_parameters:
   publicProducerSubnetGateway: 10.0.2.1
 
 openstack_parameters:
- # KEYSTONE_USER: Username for the openstack clients to use
+  # KEYSTONE_USER: Username for the openstack clients to use
   KEYSTONE_USER: username
 
   # KEYSTONE_PASSWORD: Password for the openstack clients to use
@@ -94,6 +94,9 @@ openstack_parameters:
 
   # Address of gateway for Kakfa interface on public producer subnet
   publicProducerSubnetGateway: 10.0.2.1
+
+  #Name server -  a comma separated list
+  dns_nameservers: "172.23.136.144,8.8.8.8"
 
 existing_machines_parameters:
   #Below 2 variables used in package_install.sh for offline mode

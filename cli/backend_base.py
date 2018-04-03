@@ -404,7 +404,11 @@ fi\n''')
                     LOG.debug('Still waiting for connectivity to %s.', host)
                     LOG.info(traceback.format_exc())
                     time.sleep(2)
-
+        CONSOLE.info("check_func : {}".format(check_func))
+        CONSOLE.info("check_func : {}".format(check_func))
+        CONSOLE.info("check_func : {}".format(check_func))
+        CONSOLE.info("check_func : {}".format(check_func))
+        CONSOLE.info("check_func : {}".format(check_func))
         for host in hosts:
             thread = Thread(target=do_wait, args=[host, cluster])
             thread.daemon = True
@@ -453,6 +457,7 @@ fi\n''')
 
         bastion_ip = None
         bastion_name = self._cluster + '-' + bastion
+        print(instance_map)
         if bastion_name in instance_map.keys():
             bastion_ip = instance_map[self._cluster + '-' + bastion]['ip_address']
 
@@ -468,6 +473,7 @@ fi\n''')
             files_to_scp = ['cli/pnda_env_%s.sh' % self._cluster,
                             'bootstrap-scripts/package-install.sh']
 
+            CONSOLE.info("Enter into the bastion files_to_scp: {}".format(files_to_scp))
             cmds_to_run = ['source /tmp/pnda_env_%s.sh' % self._cluster,
                            'export PNDA_CLUSTER=%s' % self._cluster,
                            'export PNDA_FLAVOR=%s' % self._flavor,
