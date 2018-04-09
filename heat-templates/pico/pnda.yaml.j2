@@ -24,13 +24,13 @@ parameters:
     description: Number of ZOOKEEPER nodes
     type: string
   KafkaNodes:
-    default: '1'
+    default: 1
     description: Number of KAFKA nodes
-    type: string
+    type: number
   DataNodes:
-    default: '1'
+    default: 1
     description: Number of DATA nodes
-    type: string
+    type: number
   OpentsdbNodes:
     default: '2'
     description: Number of Opentsdb nodes
@@ -51,6 +51,7 @@ parameters:
 resources:
   pnda_cluster:
     type: OS::Pnda::cluster
+    depends_on: [ private_network_router_interface, ingest_network_router_interface ]
     properties:
       pnda_private_network: { get_resource: pnda_private_network }
       pnda_private_subnet: { get_resource: pnda_private_subnet }

@@ -53,23 +53,23 @@ aws_parameters:
   publicProducerSubnetGateway: 10.0.2.1
 
 openstack_parameters:
- # keystone_user: Username for the openstack clients to use
+  # keystone_auth_url: Keystone authentication URL. The Openstack console provides this
+  # under the Access & Security section.
+  KEYSTONE_AUTH_URL: 'http://x.x.x.x:5000/v2.0'
+
+  # keystone_user: Username for the openstack clients to use
   KEYSTONE_USER: username
 
   # keystone_user: Password for the openstack clients to use
   KEYSTONE_PASSWORD: password
 
-  # keystone_tenant: Name of the tenant / project in the openstack environment. The
-  # PNDA stack will be created in this project.
-  KEYSTONE_TENANT: pnda
-
-  # keystone_auth_url: Keystone authentication URL. The Openstack console provides this
-  # under the Access & Security section.
-  KEYSTONE_AUTH_URL: 'http://x.x.x.x:5000/v2.0'
-
   # keystone_auth_version: Keystone authentication version. The Openstack console provides this
   # under the Access & Security section.
   KEYSTONE_AUTH_VERSION: '2'
+
+  # keystone_tenant: Name of the tenant / project in the openstack environment. The
+  # PNDA stack will be created in this project.
+  KEYSTONE_TENANT: pnda
 
   # keystone_region_name: Keystone region. The Openstack console provides this
   # under the Access & Security section.

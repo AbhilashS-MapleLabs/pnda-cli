@@ -1,3 +1,4 @@
 boto==2.48.0
 PyYAML==3.11
 requests==2.11.1
+python-heatclient==1.14.0

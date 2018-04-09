@@ -73,6 +73,7 @@ resources:
             '%stackname%': { get_param: 'OS::stack_name' }
   pnda_private_subnet:
     type: OS::Neutron::Subnet
+    depends_on: pnda_private_network
     properties:
       network_id: { get_resource: pnda_private_network }
       cidr: { get_param: privateSubnetCidr }
@@ -90,6 +91,7 @@ resources:
 #            '%stackname%': { get_param: 'OS::stack_name' }
   pnda_ingest_subnet:
     type: OS::Neutron::Subnet
+    depends_on: pnda_private_network
     properties:
 #      network_id: { get_resource: pnda_ingest_network }
       network_id: { get_resource: pnda_private_network }
@@ -112,6 +114,7 @@ resources:
   # Attach pnda_private_subnet as an interface to the pnda_router
   private_network_router_interface:
     type: OS::Neutron::RouterInterface
+    depends_on: [ pnda_router, pnda_private_subnet ]
     properties:
       router_id: { get_resource: pnda_router }
       subnet_id: { get_resource: pnda_private_subnet }
@@ -119,6 +122,7 @@ resources:
   # Attach pnda_ingest_subnet as an interface to the pnda_router
   ingest_network_router_interface:
     type: OS::Neutron::RouterInterface
+    depends_on: [ pnda_router, pnda_ingest_subnet ]
     properties:
       router_id: { get_resource: pnda_router }
       subnet_id: { get_resource: pnda_ingest_subnet }

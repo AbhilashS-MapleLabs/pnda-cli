@@ -6,11 +6,11 @@ import shutil
 import glob
 import jinja2
 import yaml
-from heatclient import client as heat_client
 from backend_base import BaseBackend
 import heatclient
 from heatclient import client as heat_client
 from keystoneauth1.identity import v2
+from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from heatclient import exc
 from heatclient.common import template_utils
@@ -19,9 +19,6 @@ utils.init_logging()
 CONSOLE = utils.CONSOLE_LOGGER
 LOG = utils.FILE_LOGGER
 LOG_FILE_NAME = utils.LOG_FILE_NAME
-# Keystone authentication
-keystone_auth = v2.Password(username=env['OS_USERNAME'], password=env['OS_PASSWORD'], tenant_name=env['OS_TENANT_NAME'],auth_url=env['OS_AUTH_URL'])
-keystone_session = session.Session(auth=keystone_auth)
 
 class HeatTemplateBackend(BaseBackend):
     '''
@@ -31,8 +28,24 @@ class HeatTemplateBackend(BaseBackend):
         self._dry_run = dry_run
         super(HeatTemplateBackend, self).__init__(
             pnda_env, cluster, no_config_check, flavor, '%s.pem' % keyname, branch)
-#        super(HeatTemplateBackend, self).__init__(
-#            pnda_env, cluster, no_config_check, flavor, self._keyfile_from_keyname(keyname), branch)
+
+    def _get_keystone_session(self):
+        username=self._pnda_env['openstack_parameters']['KEYSTONE_USER']
+        password=self._pnda_env['openstack_parameters']['KEYSTONE_PASSWORD']
+        auth_url=self._pnda_env['openstack_parameters']['KEYSTONE_AUTH_URL']
+        if self._pnda_env['openstack_parameters']['KEYSTONE_AUTH_VERSION'] == 2:
+            print "Inside v2 check:"
+            tenant_name=self._pnda_env['openstack_parameters']['KEYSTONE_TENANT']
+            auth=v2.Password(auth_url=auth_url,username=username, password=password, tenant_name=tenant_name)
+        elif self._pnda_env['openstack_parameters']['KEYSTONE_AUTH_VERSION'] == 3:
+            project_name=self._pnda_env['openstack_parameters']['KEYSTONE_TENANT']
+            #user_domain_name=self._pnda_env['openstack_parameters']['KEYSTONE_USER']
+            #project_domain_name=self._pnda_env['openstack_parameters']['KEYSTONE_USER']
+            auth=v3.Password(auth_url=auth_url,username=username, password=password, project_name=project_name)
+        else:
+            print "Invalid Auth API version"
+        keystone_session = session.Session(auth=auth)
+        return keystone_session,auth
 
     def check_target_specific_config(self):
         '''
@@ -62,27 +75,28 @@ class HeatTemplateBackend(BaseBackend):
         Use the Openstack heatclient API to launch a stack that PNDA can be installed on
         The stack is defined in template files in the flavor specific heat-template directory
         '''
-        print os.getcwd()
-#        self._deploy_stack('./cli/_resources_pico-w2/pnda.yaml')
         #Generate template files
         template_data = self._generate_template_file(
             self._flavor, node_counts['datanodes'], node_counts['opentsdb_nodes'], node_counts['kafka_nodes'], node_counts['zk_nodes'])
 #            self._es_counts['elk_es_master'], self._es_counts['elk_es_ingest'], self._es_counts['elk_es_data'],
 #            self._es_counts['elk_es_coordinator'], self._es_counts['elk_es_multi'], self._es_counts['elk_logstash']) 
         
-#        stack_param=[]
-        #parameters="ZookeeperNodes=0;KafkaNodes=1;DataNodes=1;OpentsdbNodes=0;PndaFlavor=pico;KeyName=jana"
-#        stack_params.append('ZookeeperNodes={}'.format(node_counts['zk_nodes']))
-#        stack_params.append('KafkaNodes={}'.format(node_counts['kafka_nodes']))
-#        stack_params.append('DataNodes={}'.format(node_counts['datanodes']))
-#        stack_params.append('OpentsdbNodes={}'.format(node_counts['opentsdb_nodes']))
-#        stack_params.append('PndaFlavor={}'.format(self._flavor))
-#        stack_params.append('KeyName={}'.format(self._keyfile))
-#        stack_params_string = ';'.join(stack_params)
-#        print "stack_param_string is: "
-#        print stack_param_string
-#        self._deploy_stack(stack_param_string)
-        self._deploy_stack()
+        stack_params=[]
+        print "zk_nodes: " , node_counts['zk_nodes']
+        print "kafka_nodes: ", node_counts['kafka_nodes']
+        print "datanodes: ", node_counts['datanodes']
+        print "opentsdb_nodes: ", node_counts['opentsdb_nodes']
+        stack_params.append('ZookeeperNodes={}'.format(node_counts['zk_nodes']))
+        stack_params.append('KafkaNodes={}'.format(node_counts['kafka_nodes']))
+        stack_params.append('DataNodes={}'.format(node_counts['datanodes']))
+        stack_params.append('OpentsdbNodes={}'.format(node_counts['opentsdb_nodes']))
+        stack_params.append('PndaFlavor={}'.format(self._flavor))
+        stack_params.append('KeyName={}'.format(self._keyfile[:-4]))
+        stack_params_string = ';'.join(stack_params)
+        print "stack_params_string is: "
+        print stack_params_string
+        print "stack_param: ", stack_params
+        self._deploy_stack(stack_params_string)
 
     def _merge_dicts(self, base, mergein):
         for element in mergein:
@@ -100,7 +114,6 @@ class HeatTemplateBackend(BaseBackend):
         if os.path.isdir(dest_dir):
             shutil.rmtree(dest_dir)
         os.makedirs(dest_dir)
-        #os.chdir(resources_dir)
 
         exclude_sections = ['aws_parameters', 'existing_machines_parameters']
         with open( dest_dir + '/pnda_env_openstack.yaml', 'w') as pnda_env_openstack:
@@ -126,10 +139,8 @@ class HeatTemplateBackend(BaseBackend):
         self._merge_dicts(pnda_env, instance_flavors)
         self._merge_dicts(pnda_env, resource_registry)
         print pnda_env
-        #dest=dest_dir+"/pnda_env.yaml"
         with open(dest_dir + '/pnda_env.yaml', 'w') as outfile:
             yaml.dump(pnda_env, outfile, default_flow_style=False)
-        #self._deploy_stack(dest_dir)
 
     def _generate_instance_templates(self, from_dir, to_dir):
         template_env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath='/'))
@@ -152,22 +163,13 @@ class HeatTemplateBackend(BaseBackend):
         with open('%s/pnda.yaml' % to_dir, 'w') as outfile:
             yaml.dump(pnda_common, outfile, default_flow_style=False)
 
-    def _deploy_stack(self):
+    def _deploy_stack(self,stack_params):
         stack_name = self._cluster
         # Get Environment variables
         auth_url=os.getenv('OS_AUTH_URL')
-#        auth_url=self._pnda_env['parameter_defaults']['KEYSTONE_AUTH_URL']
-        #username=os.getenv('OS_USERNAME')
-#        username=self._pnda_env['parameter_defaults']['KEYSTONE_USER']
-        #password=os.getenv('OS_PASSWORD')
-#        password=self._pnda_env['parameter_defaults']['KEYSTONE_PASSWORD']
-        #tenant_name=os.getenv('OS_TENANT_NAME')
-#        tenant_name=self._pnda_env['parameter_defaults']['KEYSTONE_TENANT']
         
         # Keystone authentication
-#        keystone_auth = v2.Password(username=username, password=password, tenant_name=tenant_name,auth_url=auth_url)
-#        keystone_session = session.Session(auth=keystone_auth)
-
+        keystone_session,keystone_auth=  self._get_keystone_session()
         kwargs = {
         'auth_url': auth_url,
         'session': keystone_session,
@@ -185,9 +187,13 @@ class HeatTemplateBackend(BaseBackend):
         e_files, e_template = template_utils.process_multiple_environments_and_files(env_paths=env_param)
         files_all=files=dict(list(tpl_files.items()) + list(e_files.items()))
 
-        parameters="ZookeeperNodes=0;KafkaNodes=1;DataNodes=1;OpentsdbNodes=0;PndaFlavor=pico"
+        print "heat_session is: "
+        print(list(heat_session.stacks.list()))
+
+        print "parameters received is "
+        print stack_params
         try:
-            status=heat_session.stacks.create(stack_name=stack_name, template=tpl_template ,files=files_all,environment=e_template, timeout_mins=120, parameter=parameters)
+            status=heat_session.stacks.create(stack_name=stack_name, template=tpl_template ,files=files_all,environment=e_template, timeout_mins=120, parameter=stack_params)
             print status
         except heatclient.exc.HTTPConflict as e:
             error_state = e.error
