@@ -6,6 +6,7 @@ import shutil
 import glob
 import jinja2
 import yaml
+import time
 from backend_base import BaseBackend
 import heatclient
 from heatclient import client as heat_client
@@ -45,7 +46,14 @@ class HeatTemplateBackend(BaseBackend):
         else:
             print "Invalid Auth API version"
         keystone_session = session.Session(auth=auth)
-        return keystone_session,auth
+        kwargs = {
+        'auth_url': auth_url,
+        'session': keystone_session,
+        'auth': auth,
+        'service_type': 'orchestration'}
+
+        heat_session = heat_client.Client(version='1', **kwargs)
+        return heat_session
 
     def check_target_specific_config(self):
         '''
@@ -67,7 +75,8 @@ class HeatTemplateBackend(BaseBackend):
     def load_node_config(self):
         pass
 
-    def fill_instance_map(self):
+    def fill_instance_map(self,stack_id):
+        #nova client initialization
         pass
 
     def pre_install_pnda(self, node_counts):
@@ -81,6 +90,7 @@ class HeatTemplateBackend(BaseBackend):
 #            self._es_counts['elk_es_master'], self._es_counts['elk_es_ingest'], self._es_counts['elk_es_data'],
 #            self._es_counts['elk_es_coordinator'], self._es_counts['elk_es_multi'], self._es_counts['elk_logstash']) 
         
+        stack_name = self._cluster
         stack_params=[]
         print "zk_nodes: " , node_counts['zk_nodes']
         print "kafka_nodes: ", node_counts['kafka_nodes']
@@ -93,10 +103,48 @@ class HeatTemplateBackend(BaseBackend):
         stack_params.append('PndaFlavor={}'.format(self._flavor))
         stack_params.append('KeyName={}'.format(self._keyfile[:-4]))
         stack_params_string = ';'.join(stack_params)
-        print "stack_params_string is: "
-        print stack_params_string
+        print "stack_params_string is: ", stack_params_string
         print "stack_param: ", stack_params
-        self._deploy_stack(stack_params_string)
+
+        heat_session=self._get_keystone_session()
+        templates_path=os.getcwd() + '/cli/' + '_resources_{}-{}'.format(self._flavor,self._cluster)
+        template_file=templates_path + "/pnda.yaml"
+        print "Template file is : " + template_file
+        env_file=templates_path + "/pnda_env.yaml"
+        env_param=[env_file]
+        print "Env file is : " + env_file
+        tpl_files, tpl_template = template_utils.process_template_path(template_file)
+        e_files, e_template = template_utils.process_multiple_environments_and_files(env_paths=env_param)
+        files_all=files=dict(list(tpl_files.items()) + list(e_files.items()))
+
+        try:
+            status=heat_session.stacks.create(stack_name=stack_name, template=tpl_template ,files=files_all,environment=e_template, timeout_mins=120, parameter=stack_params_string)
+            stack_id=status['stack']['id']
+            print status
+            print "stack_id : ", stack_id
+        except heatclient.exc.HTTPConflict as e:
+            error_state = e.error
+            print("Stack already exists : " , error_state , stack_name)
+            sys.exit(1)
+
+        except heatclient.exc.HTTPBadRequest as e:
+            error_state = e.error
+            print("Bad request : ", error_state)
+            sys.exit(1)
+
+        stack_status = 'CREATING'
+        while stack_status not in ['CREATE_COMPLETE']:
+            print stack_status
+            time.sleep(5)
+            CONSOLE.info('Stack status : ' + stack_status)
+            stack_status_body=heat_session.stacks.get(stack_id)
+            stack_status=stack_status_body.stack_status
+
+        if stack_status != 'CREATE_COMPLETE':
+            CONSOLE.error('Stack did not come up, status is: ' + stack_status)
+            sys.exit(1)
+
+        self.fill_instance_map(stack_id)
 
     def _merge_dicts(self, base, mergein):
         for element in mergein:
@@ -162,43 +210,3 @@ class HeatTemplateBackend(BaseBackend):
         self._merge_dicts(pnda_common, pnda_flavor)
         with open('%s/pnda.yaml' % to_dir, 'w') as outfile:
             yaml.dump(pnda_common, outfile, default_flow_style=False)
-
-    def _deploy_stack(self,stack_params):
-        stack_name = self._cluster
-        # Get Environment variables
-        auth_url=os.getenv('OS_AUTH_URL')
-        
-        # Keystone authentication
-        keystone_session,keystone_auth=  self._get_keystone_session()
-        kwargs = {
-        'auth_url': auth_url,
-        'session': keystone_session,
-        'auth': keystone_auth,
-        'service_type': 'orchestration'}
-
-        heat_session = heat_client.Client(version='1', **kwargs)
-        templates_path=os.getcwd() + '/cli/' + '_resources_{}-{}'.format(self._flavor,self._cluster)
-        template_file=templates_path + "/pnda.yaml"
-        print "Template file is : " + template_file
-        env_file=templates_path + "/pnda_env.yaml"
-        env_param=[env_file]
-        print "Env file is : " + env_file
-        tpl_files, tpl_template = template_utils.process_template_path(template_file)
-        e_files, e_template = template_utils.process_multiple_environments_and_files(env_paths=env_param)
-        files_all=files=dict(list(tpl_files.items()) + list(e_files.items()))
-
-        print "heat_session is: "
-        print(list(heat_session.stacks.list()))
-
-        print "parameters received is "
-        print stack_params
-        try:
-            status=heat_session.stacks.create(stack_name=stack_name, template=tpl_template ,files=files_all,environment=e_template, timeout_mins=120, parameter=stack_params)
-            print status
-        except heatclient.exc.HTTPConflict as e:
-            error_state = e.error
-            print("Stack already exists : " , error_state , stack_name)
-
-        except heatclient.exc.HTTPBadRequest as e:
-            error_state = e.error
-            print("Bad request : ", error_state)

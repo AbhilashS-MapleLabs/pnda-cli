@@ -20,9 +20,9 @@ parameters:
     description: Flavor for the data nodes
     default: ec2.c4.xlarge
   ZookeeperNodes:
-    default: '1'
+    default: 1
     description: Number of ZOOKEEPER nodes
-    type: string
+    type: number
   KafkaNodes:
     default: 1
     description: Number of KAFKA nodes
@@ -32,7 +32,7 @@ parameters:
     description: Number of DATA nodes
     type: number
   OpentsdbNodes:
-    default: '2'
+    default: 2
     description: Number of Opentsdb nodes
     type: number
   DatanodeVolumeSize:
