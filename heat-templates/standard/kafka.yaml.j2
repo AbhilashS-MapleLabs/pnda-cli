@@ -2,17 +2,13 @@
 # Specifies which bootstrap script to run to set up this instance type and which roles
 # to apply to this instance type
 
-# It is processed as a jinja2 template with the following parameters:
-#   - create_network: 0|1. Set to 1 to create network related resources or to 0 when running
-#                          for an openstack ironic bare-metal install
-
 heat_template_version: 2015-04-30
 
 parameters:
   Flavor:
     description: Flavor of the kafka server
     type: string
-    default: ec2.m3.large
+    default: ec2.m3.xlarge
   KeyName:
     description: Name of an existing ssh keypair
     type: string
@@ -22,15 +18,8 @@ parameters:
   pnda_private_subnet:
     description: Private network for pnda deployment
     type: string
-#  pnda_ingest_network:
-#    description: Private network for pnda deployment
-#    type: string
   pnda_ingest_subnet:
     description: Private network for pnda deployment
-    type: string
-  pnda_security_group_pnda:
-    type: string
-  pnda_security_group_kafka_ingest:
     type: string
   Image:
     type: string
@@ -39,6 +28,10 @@ parameters:
   NodeIndex:
     type: number
     default: 0
+  pnda_security_group_pnda:
+    type: string
+  pnda_security_group_kafka_ingest:
+    type: string
   cluster_name:
     type: string
   pnda_flavor:
@@ -46,13 +39,19 @@ parameters:
     default: standard
   logvolume_size:
     type: number
-    default: 10
+    default: 120
   signal_transport:
     type: string
     default: TEMP_URL_SIGNAL
   software_config_transport:
     type: string
     default: POLL_TEMP_URL
+  pnda_internal_network:
+    type: string
+    default: ''
+  pnda_ingest_network:
+    type: string
+    default: ''
 
 resources:
   kafka_port:
@@ -61,12 +60,12 @@ resources:
       network: { get_param: pnda_private_network }
       fixed_ips:
         - subnet_id: { get_param: pnda_private_subnet }
-      security_groups: [{ get_param: pnda_security_group_pnda }]
+      security_groups: [{ get_param: pnda_security_group_pnda  }]
 
   kafka_ingest_port:
     type: OS::Neutron::Port
     properties:
-#      network: { get_param: pnda_ingest_network }
+#     network: { get_param: pnda_ingest_network }
       network: { get_param: pnda_private_network }
       fixed_ips:
         - subnet_id: { get_param: pnda_ingest_subnet }
@@ -80,32 +79,26 @@ resources:
 
   logvolume_attachment:
     type: OS::Cinder::VolumeAttachment
-    depends_on: [ kafka_server ]
     properties:
       volume_id: { get_resource: logvolume }
       instance_uuid: { get_resource: kafka_server }
 
+
   kafka_server:
     type: OS::Nova::Server
-    depends_on: [ kafka_port, kafka_ingest_port]
     properties:
       name: { get_param: name }
       image: { get_param: Image }
       flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
-      metadata: {'node_type': 'kafka',
-                 'pnda_cluster': {get_param: cluster_name},
-                 'node_idx': {get_param: NodeIndex},
-                 'Name': {get_param: name}}
       networks:
         - port: { get_resource: kafka_port }
         - port: { get_resource: kafka_ingest_port }
-
 outputs:
   port_resource:
     description: Heat resource handle for the Neutron port
     value:
-      { get_resource: kafka_port }
+      { get_resource: port }
   server_resource:
     description: Heat resource handle for the Nova compute server
     value:

@@ -3,22 +3,12 @@
 heat_template_version: 2015-04-30
 
 parameters:
-  signal_transport:
-    type: string
-    default: TEMP_URL_SIGNAL
-  software_config_transport:
-    type: string
-    default: POLL_TEMP_URL
   Flavor:
     description: Flavor of the bastion server
     type: string
     default: ec2.t2.medium
-  Image:
-    type: string
   KeyName:
     description: Name of an existing ssh keypair
-    type: string
-  name:
     type: string
   pnda_private_network:
     description: Private network for pnda deployment
@@ -29,13 +19,23 @@ parameters:
   public_net_id:
     description: Private network for pnda deployment
     type: string
-  pnda_security_group_pnda:
+  Image:
+    type: string
+  name:
     type: string
   cluster_name:
     type: string
   pnda_flavor:
     type: string
     default: standard
+  pnda_security_group_pnda:
+    type: string
+  signal_transport:
+    type: string
+    default: TEMP_URL_SIGNAL
+  software_config_transport:
+    type: string
+    default: POLL_TEMP_URL
   os_user:
     type: string
 
@@ -44,11 +44,11 @@ resources:
     type: OS::Neutron::SecurityGroup
     properties:
       description: Bastion SecurityGroup
-      name:
+      name: 
         str_replace:
-          template: '%cname%-bastion'
+          template: cname-bastion
           params :
-            '%cname%': { get_param: cluster_name }
+            cname: { get_param: cluster_name }
       rules:
         - remote_ip_prefix: 0.0.0.0/0
           protocol: icmp
@@ -78,11 +78,13 @@ resources:
     properties:
       name: { get_param: name }
       image: { get_param: Image }
-      flavor: { get_param: Flavor}
+      flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
-      metadata: {'node_type': 'bastion',
-                 'pnda_cluster': {get_param: cluster_name},
-                 'node_idx':'',
-                 'Name': {get_param: name}}
       networks:
         - port: { get_resource: bastion_port }
+
+outputs:
+  server_resource:
+    description: Heat resource handle for the Nova compute server
+    value:
+      {get_resource: bastion_server}

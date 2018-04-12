@@ -2,44 +2,34 @@
 # Specifies which bootstrap script to run to set up this instance type and which roles
 # to apply to this instance type
 
-# It is processed as a jinja2 template with the following parameters:
-#   - create_network: 0|1. Set to 1 to create network related resources or to 0 when running
-#                          for an openstack ironic bare-metal install
-
 heat_template_version: 2015-04-30
 
 parameters:
-  signal_transport:
-    type: string
-    default: TEMP_URL_SIGNAL
-  software_config_transport:
-    type: string
-    default: POLL_TEMP_URL
   Flavor:
     description: Flavor of the datanode server
     type: string
-    default: ec2.c4.xlarge
-  Image:
-    type: string
+    default: ec2.m4.2xlarge
   KeyName:
     description: Name of an existing ssh keypair
     type: string
-  name:
-    type: string
-  NodeIndex:
-    type: number
-    default: 0
   pnda_private_network:
     description: Private network for pnda deployment
     type: string
   pnda_private_subnet:
     description: Private network for pnda deployment
     type: string
+  Image:
+    type: string
+  name:
+    type: string
+  NodeIndex:
+    type: number
+    default: 0
   pnda_security_group_pnda:
     type: string
   volume_size:
     type: number
-    default: 200
+    default: 50
   cluster_name:
     type: string
   pnda_flavor:
@@ -47,7 +37,13 @@ parameters:
     default: default
   logvolume_size:
     type: number
-    default: 10
+    default: 120
+  signal_transport:
+    type: string
+    default: TEMP_URL_SIGNAL
+  software_config_transport:
+    type: string
+    default: POLL_TEMP_URL
 
 resources:
   dn_port:
@@ -60,18 +56,14 @@ resources:
 
   dn_server:
     type: OS::Nova::Server
-    depends_on: [ dn_port ]
     properties:
       name: { get_param: name }
       image: { get_param: Image }
       flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
-      metadata: {'node_type': 'hadoop-dn',
-                 'pnda_cluster': {get_param: cluster_name},
-                 'node_idx': {get_param: NodeIndex},
-                 'Name': {get_param: name}}
       networks:
         - port: { get_resource: dn_port }
+
 
   volume:
     type: OS::Cinder::Volume
@@ -90,11 +82,11 @@ resources:
       size: { get_param: logvolume_size }
       description: Volume for datanode logs
   logvolume_attachment:
-    depends_on: dn_server
     type: OS::Cinder::VolumeAttachment
     properties:
       volume_id: { get_resource: logvolume }
       instance_uuid: { get_resource: dn_server }
+
 
 outputs:
   port_resource:
