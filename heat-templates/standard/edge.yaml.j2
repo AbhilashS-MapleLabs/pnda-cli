@@ -2,17 +2,13 @@
 # Specifies which bootstrap script to run to set up this instance type and which roles
 # to apply to this instance type
 
-# It is processed as a jinja2 template with the following parameters:
-#   - create_network: 0|1. Set to 1 to create network related resources or to 0 when running
-#                          for an openstack ironic bare-metal install
-
 heat_template_version: 2015-04-30
 
 parameters:
   Flavor:
     description: Flavor of the edge server
     type: string
-    default: ec2.m3.xlarge
+    default: ec2.t2.medium
   KeyName:
     description: Name of an existing ssh keypair
     type: string
@@ -21,8 +17,6 @@ parameters:
     type: string
   pnda_private_subnet:
     description: Private network for pnda deployment
-    type: string
-  pnda_security_group_pnda:
     type: string
   Image:
     type: string
@@ -33,12 +27,25 @@ parameters:
     default: 0
   cluster_name:
     type: string
+  pnda_security_group_pnda:
+    type: string
   pnda_flavor:
     type: string
     default: standard
   logvolume_size:
     type: number
+    default: 120
+  prvolume_size:
+    type: number
     default: 10
+  PR_FS_LOCATION_PATH:
+    description: Package repository FS location path
+    type: string
+    default: ''
+  PR_FS_TYPE:
+    description: Package repository FS type
+    type: string
+    default: ''  
   signal_transport:
     type: string
     default: TEMP_URL_SIGNAL
@@ -59,11 +66,16 @@ resources:
             cname: { get_param: cluster_name }
       rules:
         - remote_ip_prefix: 0.0.0.0/0
+          protocol: icmp
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - remote_ip_prefix: 0.0.0.0/0
           protocol: tcp
           port_range_min: 8888
           port_range_max: 8888
 
-  # Create security group for saltmaster
   saltmaster_sec_group:
     type: OS::Neutron::SecurityGroup
     properties:
@@ -82,35 +94,42 @@ resources:
   edge_port:
     type: OS::Neutron::Port
     properties:
-      network: { get_param: pnda_private_network }
+      network: { get_param: pnda_private_network  }
       fixed_ips:
-        - subnet_id: { get_param: pnda_private_subnet }
-      security_groups: [{ get_resource: edge_sec_group }, { get_param: pnda_security_group_pnda }, { get_resource: saltmaster_sec_group}]
+        - subnet_id: { get_param: pnda_private_subnet  }
+      security_groups: [{ get_resource: edge_sec_group },{ get_param: pnda_security_group_pnda  }, { get_resource: saltmaster_sec_group}]
 
   logvolume:
     type: OS::Cinder::Volume
     properties:
       size: { get_param: logvolume_size }
       description: Volume for edge logs
+{%if PR_FS_TYPE == 'local' %}      
+  prvolume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: prvolume_size }
+      description: Volume for package repository
+  prvolume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: prvolume }
+      instance_uuid: { get_resource: edge_server }
+{%endif%}
   logvolume_attachment:
     type: OS::Cinder::VolumeAttachment
-    depends_on: [ edge_server ]
     properties:
       volume_id: { get_resource: logvolume }
       instance_uuid: { get_resource: edge_server }
 
+
   edge_server:
     type: OS::Nova::Server
-    depends_on: [ edge_port ]
     properties:
       name: { get_param: name }
       image: { get_param: Image }
       flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
-      metadata: {'node_type': 'hadoop-edge',
-                 'pnda_cluster': {get_param: cluster_name},
-                 'node_idx':'',
-                 'Name': {get_param: name}}
       networks:
         - port: { get_resource: edge_port }
 

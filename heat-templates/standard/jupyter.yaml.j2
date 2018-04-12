@@ -1,18 +1,14 @@
-# Definition for the mgr1 instance type
+# Definition for the jupyter instance type
 # Specifies which bootstrap script to run to set up this instance type and which roles
 # to apply to this instance type
-
-# It is processed as a jinja2 template with the following parameters:
-#   - create_network: 0|1. Set to 1 to create network related resources or to 0 when running
-#                          for an openstack ironic bare-metal install
 
 heat_template_version: 2015-04-30
 
 parameters:
   Flavor:
-    description: Flavor of the manager1 server
+    description: Flavor of the jupyter server
     type: string
-    default: ec2.m3.xlarge
+    default: ec2.m3.large
   KeyName:
     description: Name of an existing ssh keypair
     type: string
@@ -22,79 +18,73 @@ parameters:
   pnda_private_subnet:
     description: Private network for pnda deployment
     type: string
-  pnda_security_group_pnda:
-    type: string
   Image:
     type: string
   name:
     type: string
   cluster_name:
     type: string
+  pnda_security_group_pnda:
+    type: string
   pnda_flavor:
     type: string
     default: standard
-  logvolume_size:
-    type: number
-    default: 10
   signal_transport:
     type: string
     default: TEMP_URL_SIGNAL
   software_config_transport:
     type: string
     default: POLL_TEMP_URL
+  logvolume_size:
+    type: number
+    default: 120
 
 resources:
-  mgr1_sec_group:
+  jupyter_sec_group:
     type: OS::Neutron::SecurityGroup
     properties:
-      description: CDH Manager SecurityGroup
+      description: Jupyter SecurityGroup
       name:
         str_replace:
           template:
-            cname-hadoop-mgr1
+            cname-hadoop-jupyter
           params:
             cname: { get_param: cluster_name }
       rules:
         - remote_ip_prefix: 0.0.0.0/0
           protocol: icmp
-  mgr1_port:
+  jupyter_port:
     type: OS::Neutron::Port
     properties:
-      network: { get_param: pnda_private_network }
+      network: { get_param: pnda_private_network  }
       fixed_ips:
-        - subnet_id: { get_param: pnda_private_subnet }
-      security_groups: [{ get_resource: mgr1_sec_group }, { get_param: pnda_security_group_pnda }]
+        - subnet_id: { get_param: pnda_private_subnet  }
+      security_groups: [{ get_resource: jupyter_sec_group }, { get_param: pnda_security_group_pnda  }]
 
   logvolume:
     type: OS::Cinder::Volume
     properties:
       size: { get_param: logvolume_size }
-      description: Volume for manager1 logs
+      description: Volume for jupyter logs
 
   logvolume_attachment:
     type: OS::Cinder::VolumeAttachment
-    depends_on: [ mgr1_server ]
     properties:
       volume_id: { get_resource: logvolume }
-      instance_uuid: { get_resource: mgr1_server }
+      instance_uuid: { get_resource: jupyter_server }
 
-  mgr1_server:
+  jupyter_server:
     type: OS::Nova::Server
-    depends_on: [ mgr1_port ]
     properties:
       name: { get_param: name }
       image: { get_param: Image }
       flavor: { get_param: Flavor}
       key_name: { get_param: KeyName }
-      metadata: {'node_type': 'hadoop-mgr',
-                 'pnda_cluster': {get_param: cluster_name},
-                 'node_idx':'',
-                 'Name': {get_param: name}}
       networks:
-        - port: { get_resource: mgr1_port }
+        - port: { get_resource: jupyter_port }
 
 outputs:
   server_resource:
     description: Heat resource handle for the Nova compute server
     value:
-      {get_resource: mgr1_server}
+      {get_resource: jupyter_server}
