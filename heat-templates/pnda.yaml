@@ -5,6 +5,8 @@ heat_template_version: 2015-04-30
 
 parameters:
   #keystone credentials
+  CLOUD_INFRASTRUCTURE_TYPE:
+    type: string
   KEYSTONE_USER:
     type: string
   KEYSTONE_PASSWORD:

@@ -1,20 +1,18 @@
 import sys
 import os
-from os import environ as env
-import pnda_cli_utils as utils
 import shutil
 import glob
 import jinja2
 import yaml
 import time
-from backend_base import BaseBackend
-import heatclient
 from heatclient import client as heat_client
 from keystoneauth1.identity import v2
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from heatclient import exc
 from heatclient.common import template_utils
+from backend_base import BaseBackend
+import pnda_cli_utils as utils
 
 utils.init_logging()
 CONSOLE = utils.CONSOLE_LOGGER
@@ -49,8 +47,7 @@ class HeatTemplateBackend(BaseBackend):
         kwargs = {
         'auth_url': auth_url,
         'session': keystone_session,
-        'auth': auth,
-        'service_type': 'orchestration'}
+        'auth': auth}
 
         heat_session = heat_client.Client(version='1', **kwargs)
         return heat_session
@@ -91,20 +88,6 @@ class HeatTemplateBackend(BaseBackend):
 #            self._es_counts['elk_es_coordinator'], self._es_counts['elk_es_multi'], self._es_counts['elk_logstash']) 
         
         stack_name = self._cluster
-        stack_params=[]
-        print "zk_nodes: " , node_counts['zk_nodes']
-        print "kafka_nodes: ", node_counts['kafka_nodes']
-        print "datanodes: ", node_counts['datanodes']
-        print "opentsdb_nodes: ", node_counts['opentsdb_nodes']
-        stack_params.append('ZookeeperNodes={}'.format(node_counts['zk_nodes']))
-        stack_params.append('KafkaNodes={}'.format(node_counts['kafka_nodes']))
-        stack_params.append('DataNodes={}'.format(node_counts['datanodes']))
-        stack_params.append('OpentsdbNodes={}'.format(node_counts['opentsdb_nodes']))
-        stack_params.append('PndaFlavor={}'.format(self._flavor))
-        stack_params.append('KeyName={}'.format(self._keyfile[:-4]))
-        stack_params_string = ';'.join(stack_params)
-        print "stack_params_string is: ", stack_params_string
-        print "stack_param: ", stack_params
 
         heat_session=self._get_keystone_session()
         templates_path=os.getcwd() + '/cli/' + '_resources_{}-{}'.format(self._flavor,self._cluster)
@@ -118,7 +101,7 @@ class HeatTemplateBackend(BaseBackend):
         files_all=files=dict(list(tpl_files.items()) + list(e_files.items()))
 
         try:
-            status=heat_session.stacks.create(stack_name=stack_name, template=tpl_template ,files=files_all,environment=e_template, timeout_mins=120, parameter=stack_params_string)
+            status=heat_session.stacks.create(stack_name=stack_name, template=tpl_template ,files=files_all,environment=e_template, timeout_mins=120)
             stack_id=status['stack']['id']
             print status
             print "stack_id : ", stack_id
@@ -157,20 +140,30 @@ class HeatTemplateBackend(BaseBackend):
                         base[element][child] = mergein[element][child]
 
     def _generate_template_file(self, flavor, datanodes, opentsdbs, kafkas, zookeepers):
+        stack_params=[]
+        stack_params.append('ZookeeperNodes: {}'.format(zookeepers))
+        stack_params.append('KafkaNodes: {}'.format(kafkas))
+        stack_params.append('DataNodes: {}'.format(datanodes))
+        stack_params.append('OpentsdbNodes: {}'.format(opentsdbs))
+        print stack_params
+
         resources_dir = '_resources_{}-{}'.format(flavor, self._cluster)
         dest_dir = '{}/{}'.format(os.getcwd()+'/cli', resources_dir)
         if os.path.isdir(dest_dir):
             shutil.rmtree(dest_dir)
         os.makedirs(dest_dir)
 
-        exclude_sections = ['aws_parameters', 'existing_machines_parameters']
+        include_sections = ['cloud_infrastructure', 'openstack_parameters']
         with open( dest_dir + '/pnda_env_openstack.yaml', 'w') as pnda_env_openstack:
-            pnda_env_openstack.write('parameter_defaults:\n')
+            pnda_env_openstack.write('parameters:\n')
             for section in self._pnda_env:
-                if section not in exclude_sections:
+                if section  in include_sections:
                     for setting in self._pnda_env[section]:
                         val = '"%s"' % self._pnda_env[section][setting] if isinstance(self._pnda_env[section][setting], (list, tuple)) else self._pnda_env[section][setting]
                         pnda_env_openstack.write('  %s: %s\n' % (setting, val))
+            for instance_node in stack_params:
+                print instance_node
+                pnda_env_openstack.write('  %s\n' % (instance_node))
         pnda_env_openstack.close()
 
         for yaml_file in glob.glob('heat-templates/%s/*.yaml' % flavor):
@@ -210,3 +203,7 @@ class HeatTemplateBackend(BaseBackend):
         self._merge_dicts(pnda_common, pnda_flavor)
         with open('%s/pnda.yaml' % to_dir, 'w') as outfile:
             yaml.dump(pnda_common, outfile, default_flow_style=False)
+
+    def pre_destroy_pnda(self):
+        CONSOLE.info('Deleting Openstack stack')
+        stack_name = self._cluster
