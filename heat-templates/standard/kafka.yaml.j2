@@ -91,6 +91,10 @@ resources:
       image: { get_param: Image }
       flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
+      metadata: {'node_type': 'kafka',
+                 'pnda_cluster': {get_param: cluster_name},
+                 'node_idx': {get_param: NodeIndex},
+                 'Name': {get_param: name}}
       networks:
         - port: { get_resource: kafka_port }
         - port: { get_resource: kafka_ingest_port }

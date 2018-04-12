@@ -130,6 +130,10 @@ resources:
       image: { get_param: Image }
       flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
+      metadata: {'node_type': 'hadoop-edge',
+                 'pnda_cluster': {get_param: cluster_name},
+                 'node_idx': "",
+                 'Name': {get_param: name}}
       networks:
         - port: { get_resource: edge_port }
 
