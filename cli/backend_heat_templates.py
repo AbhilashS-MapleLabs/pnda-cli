@@ -5,6 +5,7 @@ import glob
 import jinja2
 import yaml
 import time
+import heatclient
 from heatclient import client as heat_client
 from keystoneauth1.identity import v2
 from keystoneauth1.identity import v3
@@ -207,3 +208,16 @@ class HeatTemplateBackend(BaseBackend):
     def pre_destroy_pnda(self):
         CONSOLE.info('Deleting Openstack stack')
         stack_name = self._cluster
+        heat_session=self._get_keystone_session()
+        try:
+            delete_status=heat_session.stacks.delete(stack_id=stack_name)
+            print delete_status
+        except heatclient.exc.HTTPConflict as e:
+            error_state = e.error
+            print("Stack does not exists : " , error_state , stack_name)
+            sys.exit(1)
+
+        except heatclient.exc.HTTPBadRequest as e:
+            error_state = e.error
+            print("Bad request : ", error_state)
+            sys.exit(1)

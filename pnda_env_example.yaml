@@ -65,7 +65,7 @@ openstack_parameters:
 
   # keystone_auth_version: Keystone authentication version. The Openstack console provides this
   # under the Access & Security section.
-  KEYSTONE_AUTH_VERSION: '2'
+  KEYSTONE_AUTH_VERSION: 2
 
   # keystone_tenant: Name of the tenant / project in the openstack environment. The
   # PNDA stack will be created in this project.
