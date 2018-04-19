@@ -105,8 +105,8 @@ def select_deployment_target_impl(fields):
         fields['opentsdb_nodes'] = node_counts['opentsdb']
         fields['kafka_nodes'] = node_counts['kafka']
         fields['zk_nodes'] = node_counts['zk']
-        PNDA_ENV['cloud_infrastructure']['CLOUD_INFRASTRUCTURE_TYPE'] == 'existing_machine'
-    elif PNDA_ENV['cloud_infrastructure']['CLOUD_INFRASTRUCTURE_TYPE'] == 'aws':
+        PNDA_ENV['infrastructure']['INFRASTRUCTURE_TYPE'] == 'existing_machine'
+    elif PNDA_ENV['infrastructure']['INFRASTRUCTURE_TYPE'] == 'aws':
         exclude_sections= ['openstack_parameters','existing_machines_parameters']
         os.environ['AWS_ACCESS_KEY_ID'] = PNDA_ENV['aws_parameters']['AWS_ACCESS_KEY_ID']
         os.environ['AWS_SECRET_ACCESS_KEY'] = PNDA_ENV['aws_parameters']['AWS_SECRET_ACCESS_KEY']
@@ -169,7 +169,7 @@ def main():
     fields['branch'] = branch
 
     deployment_target = select_deployment_target_impl(fields)
-    PNDA_ENV['cloud_infrastructure']['SSH_KEY'] = '%s%s' % (fields['keyname'], '.pem')
+    PNDA_ENV['infrastructure']['SSH_KEY'] = '%s%s' % (fields['keyname'], '.pem')
     write_pnda_env_sh(fields['pnda_cluster'])
 
     ###
