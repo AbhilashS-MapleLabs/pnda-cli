@@ -148,7 +148,6 @@ class HeatTemplateBackend(BaseBackend):
         heat_session=self._get_heat_session()
         templates_path=os.getcwd() + '/cli/' + '_resources_{}-{}'.format(self._flavor,self._cluster)
         template_file=templates_path + "/pnda.yaml"
-        print "Template file is : " + template_file
         env_file=templates_path + "/pnda_env.yaml"
         config, ind, bsi = ruamel.yaml.util.load_yaml_guess_indent(open(env_file))
 	parameters = config['parameters']
@@ -161,12 +160,11 @@ class HeatTemplateBackend(BaseBackend):
 	ruamel.yaml.round_trip_dump(config, open(env_file, 'w'),
                             indent=ind, block_seq_indent=bsi)
         env_param=[env_file]
-        print "Env file is : " + env_file
         tpl_files, tpl_template = template_utils.process_template_path(template_file)
-        e_files, e_template = template_utils.process_multiple_environments_and_files(env_paths=env_param)
-        files_all=files=dict(list(tpl_files.items()) + list(e_files.items()))
+        env_files, env_template = template_utils.process_multiple_environments_and_files(env_paths=env_param)
+        files_all=files=dict(list(tpl_files.items()) + list(env_files.items()))
         try:
-            status=heat_session.stacks.create(stack_name=stack_name, template=tpl_template ,files=files_all,environment=e_template, timeout_mins=120)
+            status=heat_session.stacks.create(stack_name=stack_name, template=tpl_template ,files=files_all,environment=env_template, timeout_mins=120)
             stack_id=status['stack']['id']
             print status
             print "stack_id : ", stack_id
@@ -201,8 +199,6 @@ class HeatTemplateBackend(BaseBackend):
         #Generate template files
         template_data = self._update_template_file(
             self._flavor, node_counts['datanodes'], node_counts['opentsdb_nodes'], node_counts['kafka_nodes'], node_counts['zk_nodes'])
-#           self._es_counts['elk_es_master'], self._es_counts['elk_es_ingest'], self._es_counts['elk_es_data'],
-#           self._es_counts['elk_es_coordinator'], self._es_counts['elk_es_multi'], self._es_counts['elk_logstash'])
 
         stack_name = self._cluster
         heat_session = self._get_heat_session()
@@ -213,11 +209,11 @@ class HeatTemplateBackend(BaseBackend):
         env_param = [env_file]
         print "Env file is : " + env_file
         tpl_files, tpl_template = template_utils.process_template_path(template_file)
-        e_files, e_template = template_utils.process_multiple_environments_and_files(env_paths=env_param)
-        files_all = files = dict(list(tpl_files.items()) + list(e_files.items()))
+        env_files, env_template = template_utils.process_multiple_environments_and_files(env_paths=env_param)
+        files_all = files = dict(list(tpl_files.items()) + list(env_files.items()))
 
         try:
-            heat_session.stacks.update(stack_id=stack_name, template=tpl_template, files=files_all, environment=e_template, timeout_mins=120)
+            heat_session.stacks.update(stack_id=stack_name, template=tpl_template, files=files_all, environment=env_template, timeout_mins=120)
             stack_status_body = heat_session.stacks.get(stack_id = stack_name) 
 	    stack_status = stack_status_body.stack_status
             stack_id = stack_status_body.stack_name

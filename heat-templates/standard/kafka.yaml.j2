@@ -75,7 +75,7 @@ resources:
       flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
       metadata: {'node_type': 'kafka',
-                 'pnda_cluster': {get_param: 'OS::stack_name'},
+                 'pnda_cluster': {get_param: stack_name },
                  'node_idx': {get_param: NodeIndex},
                  'Name': {get_param: name}}
       networks:
