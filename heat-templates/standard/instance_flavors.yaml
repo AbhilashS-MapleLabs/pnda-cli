@@ -18,4 +18,4 @@ parameter_defaults:
   DatanodeFlavor: ec2.m4.2xlarge
   SaltmasterFlavor: ec2.m4.large
   DatanodeVolumeSize: 1024
-  PndaFlavor: standard
+  LogVolumeSize: 120

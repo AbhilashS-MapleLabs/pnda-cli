@@ -37,6 +37,9 @@ parameters:
   KeyName:
     description: Name of an existing KeyPair to enable SSH access to the instances
     type: string
+  dns_nameservers:
+    description: A specified  DNS name servers to be used.
+    type: comma_delimited_list
 
 resources:
   # Create pnda private net and subnet. All pnda-cluster nodes will be part of this network
@@ -72,7 +75,7 @@ resources:
       network_id: { get_resource: pnda_ingest_network }
       cidr: { get_param: publicProducerSubnetCidr }
       gateway_ip: { get_param: publicProducerSubnetGateway }
-      #dns_nameservers: { get_param: dns_nameservers }
+      dns_nameservers: { get_param: dns_nameservers }
 
   # create a software router
   pnda_router:
@@ -117,6 +120,19 @@ resources:
           port_range_min: 22
           port_range_max: 22
           remote_ip_prefix: { get_param: whitelistSshAccess }
+
+        - protocol: udp
+          port_range_min: 123
+          port_range_max: 123
+          remote_ip_prefix: { get_param: whitelistSshAccess }
+
+        - protocol: udp
+          port_range_min: 53
+          port_range_max: 53
+          remote_mode: remote_group_id
+
+        - protocol: icmp
+          remote_mode: remote_group_id
 
         - protocol: tcp
           port_range_min: 1

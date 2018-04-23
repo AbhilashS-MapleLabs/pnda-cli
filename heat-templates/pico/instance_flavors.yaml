@@ -7,4 +7,4 @@ parameter_defaults:
   DatanodeFlavor: ec2.c4.xlarge
   BastionFlavor: ec2.t2.medium
   DatanodeVolumeSize: 35
-  PndaFlavor: pico
+  LogVolumeSize: 10

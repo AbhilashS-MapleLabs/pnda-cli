@@ -3,10 +3,11 @@
 heat_template_version: 2015-04-30
 
 parameters:
+  stack_name:
+    type: string
   Flavor:
     description: Flavor of the bastion server
     type: string
-    default: ec2.t2.medium
   KeyName:
     description: Name of an existing ssh keypair
     type: string
@@ -23,19 +24,8 @@ parameters:
     type: string
   name:
     type: string
-  cluster_name:
-    type: string
-  pnda_flavor:
-    type: string
-    default: standard
   pnda_security_group_pnda:
     type: string
-  signal_transport:
-    type: string
-    default: TEMP_URL_SIGNAL
-  software_config_transport:
-    type: string
-    default: POLL_TEMP_URL
 
 resources:
   bastion_port:
@@ -62,7 +52,7 @@ resources:
       flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
       metadata: {'node_type': 'bastion',
-                 'pnda_cluster': {get_param: cluster_name},
+                 'pnda_cluster': {get_param: stack_name},
                  'node_idx': "",
                  'Name': {get_param: name}}
       networks:

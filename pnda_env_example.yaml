@@ -50,11 +50,7 @@ aws_parameters:
   publicProducerSubnetGateway: 10.0.2.1
 
 openstack_parameters:
-  # keystone_auth_url: Keystone authentication URL. The Openstack console provides this
-  # under the Access & Security section.
-  KEYSTONE_AUTH_URL: 'http://x.x.x.x:5000/v2.0'
-
-  # keystone_user: Username for the openstack clients to use
+  # KEYSTONE_USER: Username for the openstack clients to use
   KEYSTONE_USER: username
 
   # KEYSTONE_PASSWORD: Password for the openstack clients to use
@@ -72,7 +68,7 @@ openstack_parameters:
   # under the Access & Security section.
   KEYSTONE_AUTH_VERSION: '2'
 
-  # keystone_region_name: Keystone region. The Openstack console provides this
+  # KEYSTONE_REGION_NAME: Keystone region. The Openstack console provides this
   # under the Access & Security section.
   KEYSTONE_REGION_NAME: RegionOne
 
@@ -98,6 +94,9 @@ openstack_parameters:
 
   # Address of gateway for Kakfa interface on public producer subnet
   publicProducerSubnetGateway: 10.0.2.1
+
+  #Name server
+  dns_nameservers: "8.8.8.8"
 
 existing_machines_parameters:
   #Below 2 variables used in package_install.sh for offline mode

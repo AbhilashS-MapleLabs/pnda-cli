@@ -12,7 +12,6 @@ parameters:
   Flavor:
     description: Flavor of the manager1 server
     type: string
-    default: ec2.m3.xlarge
   KeyName:
     description: Name of an existing ssh keypair
     type: string
@@ -28,20 +27,10 @@ parameters:
     type: string
   name:
     type: string
-  cluster_name:
-    type: string
-  pnda_flavor:
-    type: string
-    default: standard
-  logvolume_size:
+  LogVolumeSize:
     type: number
-    default: 10
-  signal_transport:
+  stack_name:
     type: string
-    default: TEMP_URL_SIGNAL
-  software_config_transport:
-    type: string
-    default: POLL_TEMP_URL
 
 resources:
   mgr1_port:
@@ -55,7 +44,7 @@ resources:
   logvolume:
     type: OS::Cinder::Volume
     properties:
-      size: { get_param: logvolume_size }
+      size: { get_param: LogVolumeSize }
       description: Volume for manager1 logs
 
   logvolume_attachment:
@@ -74,7 +63,7 @@ resources:
       flavor: { get_param: Flavor}
       key_name: { get_param: KeyName }
       metadata: {'node_type': 'hadoop-mgr',
-                 'pnda_cluster': {get_param: cluster_name},
+                 'pnda_cluster': {get_param: stack_name},
                  'node_idx':'',
                  'Name': {get_param: name}}
       networks:

@@ -9,16 +9,9 @@
 heat_template_version: 2015-04-30
 
 parameters:
-  signal_transport:
-    type: string
-    default: TEMP_URL_SIGNAL
-  software_config_transport:
-    type: string
-    default: POLL_TEMP_URL
   Flavor:
     description: Flavor of the datanode server
     type: string
-    default: ec2.c4.xlarge
   Image:
     type: string
   KeyName:
@@ -28,7 +21,6 @@ parameters:
     type: string
   NodeIndex:
     type: number
-    default: 0
   pnda_private_network:
     description: Private network for pnda deployment
     type: string
@@ -37,17 +29,12 @@ parameters:
     type: string
   pnda_security_group_pnda:
     type: string
-  volume_size:
+  DatanodeVolumeSize:
     type: number
-    default: 200
-  cluster_name:
-    type: string
-  pnda_flavor:
-    type: string
-    default: default
-  logvolume_size:
+  LogVolumeSize:
     type: number
-    default: 10
+  stack_name:
+    type: string
 
 resources:
   dn_port:
@@ -67,7 +54,7 @@ resources:
       flavor: { get_param: Flavor }
       key_name: { get_param: KeyName }
       metadata: {'node_type': 'hadoop-dn',
-                 'pnda_cluster': {get_param: cluster_name},
+                 'pnda_cluster': {get_param: stack_name},
                  'node_idx': {get_param: NodeIndex},
                  'Name': {get_param: name}}
       networks:
@@ -76,7 +63,7 @@ resources:
   pnda_volume_data:
     type: OS::Cinder::Volume
     properties:
-      size: { get_param: volume_size }
+      size: { get_param: DatanodeVolumeSize }
       description: Volume for datanode
   pnda_volume_attachment_data:
     type: OS::Cinder::VolumeAttachment
@@ -88,7 +75,7 @@ resources:
   pnda_volume_log_data:
     type: OS::Cinder::Volume
     properties:
-      size: { get_param: logvolume_size }
+      size: { get_param: LogVolumeSize }
       description: Volume for datanode logs
   pnda_volume_attachment_log_data:
     depends_on: dn_server

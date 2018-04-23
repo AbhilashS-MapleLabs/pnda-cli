@@ -3,400 +3,270 @@
 # each instance type, and these specific yaml files configure the
 # instance as required for that type of node.
 
-# It is processed as a jinja2 template with the following parameters:
-#   - create_network: 0|1. Set to 1 to create network related resources
-
 heat_template_version: 2015-04-30
 
 parameters:
-  Manager1Flavor:
+  image_id:
     type: string
-    description: Flavor for the manager nodes
-    default: m1.xlarge
-  Manager2Flavor:
-    type: string
-    description: Flavor for the manager nodes
-    default: m1.xlarge
-  Manager3Flavor:
-    type: string
-    description: Flavor for the manager nodes
-    default: m1.xlarge
-  Manager4Flavor:
-    type: string
-    description: Flavor for the manager nodes
-    default: m1.xlarge
-  EdgeFlavor:
-    type: string
-    description: Flavor for the edge node
-    default: m1.xlarge
   BastionFlavor:
     type: string
     description: Flavor for the bastion nodes
-    default: m1.large
-  ZookeeperFlavor:
+  EdgeFlavor:
     type: string
-    description: Flavor for the zookeeper nodes
-    default: m1.large
-  KafkaFlavor:
-    type: string
-    description: Flavor for the kafka nodes
-    default: m1.large
-  DatanodeFlavor:
-    type: string
-    description: Flavor for the data nodes
-    default: m1.xlarge
+    description: Flavor for the edge node
   CMFlavor:
     type: string
-    description: Flavor for the CM node
-    default: m1.xlarge
+    description: Flavor for the data nodes
+  Manager1Flavor:
+    type: string
+    description: Flavor for the manager nodes
+  Manager2Flavor:
+    type: string
+    description: Flavor for the manager nodes
+  Manager3Flavor:
+    type: string
+    description: Flavor for the manager nodes
+  Manager4Flavor:
+    type: string
+    description: Flavor for the manager nodes
   ToolsFlavor:
     type: string
     description: Flavor for the tools nodes
-    default: m1.large
   SaltmasterFlavor:
     type: string
     description: Flavor for the Saltmaster nodes
-    default: m1.large
   JupyterFlavor:
     type: string
     description: Flavor for the Jupyter nodes
-    default: m1.large
   LogserverFlavor:
     type: string
     description: Flavor for the logserver node
-    default: m1.large
+  DatanodeFlavor:
+    type: string
+    description: Flavor for the data nodes
+  KafkaFlavor:
+    type: string
+    description: Flavor for the kafka nodes
   OpentsdbFlavor:
     type: string
     description: Flavor for the opentsdb node
-    default: m1.large
-  image_id:
+  ZookeeperFlavor:
     type: string
-    description: default image for pnda servers
-
-  ToolsNodes:
-    default: '1'
-    description: Number of TOOLS nodes
-    type: string
-  ZookeeperNodes:
-    default: '1'
-    description: Number of ZOOKEEPER nodes
-    type: string
-  KafkaNodes:
-    default: '1'
-    description: Number of KAFKA nodes
-    type: string
+    description: Flavor for the zookeeper nodes
+   
   DataNodes:
-    default: '4'
     description: Number of DATA nodes
     type: string
+  KafkaNodes:
+    description: Number of KAFKA nodes
+    type: string
   OpentsdbNodes:
-    default: 2
     description: Number of Opentsdb nodes
     type: number
-
+  ZookeeperNodes:
+    description: Number of ZOOKEEPER nodes
+    type: string
   DatanodeVolumeSize:
-    default: 200
     type: number
-
+  LogVolumeSize:
+    type: number
   public_net_id:
     type: string
-    description: >
-      ID or name of public network for which floating IP addresses will be allocated
   pnda_private_network:
     type: string
   pnda_private_subnet:
-    type: string
-  KeyName:
-    description: Name of an existing KeyPair to enable SSH access to the instances
     type: string
   pnda_ingest_network:
     type: string
   pnda_ingest_subnet:
     type: string
-  PndaFlavor:
-    description: pnda flavor
+  KeyName:
     type: string
-    default: standard
   pnda_security_group_pnda:
     type: string
   pnda_security_group_kafka_ingest:
     type: string
-  deployment_name:
+  stack_name:
     type: string
-  signal_transport:
-    type: string
-    default: TEMP_URL_SIGNAL
-  software_config_transport:
-    type: string
-    default: POLL_TEMP_URL
 
 resources:
-
   bastion:
     type: OS::Pnda::bastion
     properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
       Flavor: { get_param: BastionFlavor }
       Image: { get_param: image_id }
       KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      public_net_id: { get_param: public_net_id }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
       name:
         str_replace:
           template: '%stackname%-bastion'
           params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network  }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      public_net_id: { get_param: public_net_id }
-      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      cluster_name: { get_param: deployment_name }
-      pnda_flavor: { get_param: PndaFlavor }
-
-  zookeeper:
-    type: OS::Heat::ResourceGroup
-    properties:
-      count: { get_param: ZookeeperNodes }
-      resource_def:
-        type: OS::Pnda::zookeeper
-        properties:
-          signal_transport: { get_param: signal_transport }
-          software_config_transport: { get_param: software_config_transport }
-          Flavor: { get_param: ZookeeperFlavor }
-          Image: { get_param: image_id }
-          KeyName: { get_param: KeyName }
-          name:
-            str_replace:
-              template: '%stackname%-zookeeper-%index%'
-              params:
-                '%stackname%': { get_param: deployment_name }
-          NodeIndex: '%index%'
-          pnda_private_network: { get_param: pnda_private_network }
-          pnda_private_subnet: { get_param: pnda_private_subnet }
-          cluster_name: { get_param: deployment_name }
-          pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-          pnda_flavor: { get_param: PndaFlavor }
-
-  kafka:
-    type: OS::Heat::ResourceGroup
-    properties:
-      count: { get_param: KafkaNodes }
-      resource_def:
-        type: OS::Pnda::kafka
-        properties:
-          signal_transport: { get_param: signal_transport }
-          software_config_transport: { get_param: software_config_transport }
-          Flavor: { get_param: KafkaFlavor }
-          Image: { get_param: image_id }
-          KeyName: { get_param: KeyName }
-          name:
-            str_replace:
-              template: '%stackname%-kafka-%index%'
-              params:
-                '%stackname%': { get_param: deployment_name }
-          NodeIndex: '%index%'
-          pnda_private_network: { get_param: pnda_private_network }
-          pnda_private_subnet: { get_param: pnda_private_subnet }
-          pnda_ingest_network: { get_param: pnda_ingest_network }
-          pnda_ingest_subnet: { get_param: pnda_ingest_subnet }
-          cluster_name: { get_param: deployment_name }
-          pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-          pnda_security_group_kafka_ingest: { get_param: pnda_security_group_kafka_ingest }
-          pnda_flavor: { get_param: PndaFlavor }
-
-  tools:
-    type: OS::Heat::ResourceGroup
-    properties:
-      count: { get_param: ToolsNodes }
-      resource_def:
-        type: OS::Pnda::tools
-        properties:
-          signal_transport: { get_param: signal_transport }
-          software_config_transport: { get_param: software_config_transport }
-          Flavor: { get_param: ToolsFlavor }
-          Image: { get_param: image_id }
-          KeyName: { get_param: KeyName }
-          name:
-            str_replace:
-              template: '%stackname%-tools-%index%'
-              params:
-                '%stackname%': { get_param: deployment_name }
-          NodeIndex: '%index%'
-          pnda_private_network: { get_param: pnda_private_network }
-          pnda_private_subnet: { get_param: pnda_private_subnet }
-          cluster_name: { get_param: deployment_name }
-          pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-          pnda_flavor: { get_param: PndaFlavor }
-  cm:
-    type: OS::Pnda::cm
-    properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
-      Flavor: { get_param: CMFlavor }
-      Image: { get_param: image_id }
-      KeyName: { get_param: KeyName }
-      name:
-        str_replace:
-          template: '%stackname%-hadoop-cm'
-          params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      cluster_name: { get_param: deployment_name }
-      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      pnda_flavor: { get_param: PndaFlavor }
-
-  logserver:
-    type: OS::Pnda::logserver
-    properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
-      Flavor: { get_param: LogserverFlavor }
-      Image: { get_param: image_id }
-      KeyName: { get_param: KeyName }
-      name:
-        str_replace:
-          template: '%stackname%-logserver'
-          params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      cluster_name: { get_param: deployment_name }
-      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      pnda_flavor: { get_param: PndaFlavor }
-
-  saltmaster:
-    type: OS::Pnda::saltmaster
-    properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
-      Flavor: { get_param: SaltmasterFlavor }
-      Image: { get_param: image_id }
-      KeyName: { get_param: KeyName }
-      name:
-        str_replace:
-          template: '%stackname%-saltmaster'
-          params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      cluster_name: { get_param: deployment_name }
-      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      pnda_flavor: { get_param: PndaFlavor }
-
-
-  jupyter:
-    type: OS::Pnda::jupyter
-    properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
-      Flavor: { get_param: JupyterFlavor }
-      Image: { get_param: image_id }
-      KeyName: { get_param: KeyName }
-      name:
-        str_replace:
-          template: '%stackname%-hadoop-jupyter'
-          params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      cluster_name: { get_param: deployment_name }
-      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      pnda_flavor: { get_param: PndaFlavor }
-
-  manager1:
-    type: OS::Pnda::manager1
-    properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
-      Flavor: { get_param: Manager1Flavor }
-      Image: { get_param: image_id }
-      KeyName: { get_param: KeyName }
-      name:
-        str_replace:
-          template: '%stackname%-hadoop-mgr-1'
-          params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      cluster_name: { get_param: deployment_name }
-      pnda_flavor: { get_param: PndaFlavor }
-
-  manager2:
-    type: OS::Pnda::manager2
-    properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
-      Flavor: { get_param: Manager2Flavor }
-      Image: { get_param: image_id }
-      KeyName: { get_param: KeyName }
-      name:
-        str_replace:
-          template: '%stackname%-hadoop-mgr-2'
-          params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      pnda_security_group_pnda : { get_param: pnda_security_group_pnda  }
-      cluster_name: { get_param: deployment_name }
-      pnda_flavor: { get_param: PndaFlavor }
-
-  manager3:
-    type: OS::Pnda::manager3
-    properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
-      Flavor: { get_param: Manager3Flavor }
-      Image: { get_param: image_id }
-      KeyName: { get_param: KeyName }
-      name:
-        str_replace:
-          template: '%stackname%-hadoop-mgr-3'
-          params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      cluster_name: { get_param: deployment_name }
-      pnda_flavor: { get_param: PndaFlavor }
-
-  manager4:
-    type: OS::Pnda::manager4
-    properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
-      Flavor: { get_param: Manager4Flavor }
-      Image: { get_param: image_id }
-      KeyName: { get_param: KeyName }
-      name:
-        str_replace:
-          template: '%stackname%-hadoop-mgr-4'
-          params:
-            '%stackname%': { get_param: deployment_name }
-      pnda_private_network: { get_param: pnda_private_network }
-      pnda_private_subnet: { get_param: pnda_private_subnet }
-      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      cluster_name: { get_param: deployment_name }
-      pnda_flavor: { get_param: PndaFlavor }
+            '%stackname%': { get_param: stack_name  }
 
   edge:
     type: OS::Pnda::edge
     properties:
-      signal_transport: { get_param: signal_transport }
-      software_config_transport: { get_param: software_config_transport }
       Flavor: { get_param: EdgeFlavor }
       Image: { get_param: image_id }
       KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      LogVolumeSize: { get_param: LogVolumeSize }
       name:
         str_replace:
           template: '%stackname%-hadoop-edge'
           params:
-            '%stackname%': { get_param: deployment_name }
+            '%stackname%': { get_param: stack_name }
+
+  cm:
+    type: OS::Pnda::cm
+    properties:
+      Flavor: { get_param: CMFlavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
       pnda_private_network: { get_param: pnda_private_network }
       pnda_private_subnet: { get_param: pnda_private_subnet }
-      cluster_name: { get_param: deployment_name }
       pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-      pnda_flavor: { get_param: PndaFlavor }
+      LogVolumeSize: { get_param: LogVolumeSize }
+      name:
+        str_replace:
+          template: '%stackname%-hadoop-cm'
+          params:
+            '%stackname%': { get_param: stack_name }
+  manager1:
+    type: OS::Pnda::manager1
+    properties:
+      Flavor: { get_param: Manager1Flavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      LogVolumeSize: { get_param: LogVolumeSize }
+      name:
+        str_replace:
+          template: '%stackname%-hadoop-mgr-1'
+          params:
+            '%stackname%': { get_param: stack_name }
+  manager2:
+    type: OS::Pnda::manager2
+    properties:
+      Flavor: { get_param: Manager2Flavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      LogVolumeSize: { get_param: LogVolumeSize }
+      name:
+        str_replace:
+          template: '%stackname%-hadoop-mgr-2'
+          params:
+            '%stackname%': { get_param: stack_name }
+  manager3:
+    type: OS::Pnda::manager3
+    properties:
+      Flavor: { get_param: Manager3Flavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      LogVolumeSize: { get_param: LogVolumeSize }
+      name:
+        str_replace:
+          template: '%stackname%-hadoop-mgr-3'
+          params:
+            '%stackname%': { get_param: stack_name }
+  manager4:
+    type: OS::Pnda::manager4
+    properties:
+      Flavor: { get_param: Manager4Flavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      LogVolumeSize: { get_param: LogVolumeSize }
+      name:
+        str_replace:
+          template: '%stackname%-hadoop-mgr-4'
+          params:
+            '%stackname%': { get_param: stack_name }
+
+  tools:
+    type: OS::Pnda::tools
+    properties:
+      Flavor: { get_param: ToolsFlavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      name:
+          str_replace:
+            template: '%stackname%-tools'
+            params:
+              '%stackname%': { get_param: stack_name }
+  logserver:
+    type: OS::Pnda::logserver
+    properties:
+      Flavor: { get_param: LogserverFlavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      LogVolumeSize: { get_param: LogVolumeSize }
+      name:
+        str_replace:
+          template: '%stackname%-logserver'
+          params:
+            '%stackname%': { get_param: stack_name }
+  saltmaster:
+    type: OS::Pnda::saltmaster
+    properties:
+      Flavor: { get_param: SaltmasterFlavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      name:
+        str_replace:
+          template: '%stackname%-saltmaster'
+          params:
+            '%stackname%': { get_param: stack_name }
+  jupyter:
+    type: OS::Pnda::jupyter
+    properties:
+      Flavor: { get_param: JupyterFlavor }
+      Image: { get_param: image_id }
+      KeyName: { get_param: KeyName }
+      stack_name: { get_param: stack_name }
+      pnda_private_network: { get_param: pnda_private_network }
+      pnda_private_subnet: { get_param: pnda_private_subnet }
+      pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+      LogVolumeSize: { get_param: LogVolumeSize }
+      name:
+        str_replace:
+          template: '%stackname%-hadoop-jupyter'
+          params:
+            '%stackname%': { get_param: stack_name }
 
   dn:
     type: OS::Heat::ResourceGroup
@@ -405,24 +275,47 @@ resources:
       resource_def:
         type: OS::Pnda::dn
         properties:
-          signal_transport: { get_param: signal_transport }
-          software_config_transport: { get_param: software_config_transport }
           Flavor: { get_param: DatanodeFlavor }
           Image: { get_param: image_id }
           KeyName: { get_param: KeyName }
+          stack_name: { get_param: stack_name }
+          pnda_private_network: { get_param: pnda_private_network }
+          pnda_private_subnet: { get_param: pnda_private_subnet }
+          pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+          DatanodeVolumeSize: { get_param: DatanodeVolumeSize }
+          LogVolumeSize: { get_param: LogVolumeSize }
+          NodeIndex: '%index%'
           name:
             str_replace:
               template: '%stackname%-hadoop-dn-%index%'
               params:
-                '%stackname%': { get_param: deployment_name }
-          NodeIndex: '%index%'
+                '%stackname%': { get_param: stack_name }
+
+  kafka:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: KafkaNodes }
+      resource_def:
+        type: OS::Pnda::kafka
+        properties:
+          stack_name: { get_param: stack_name }
+          Flavor: { get_param: KafkaFlavor }
+          Image: { get_param: image_id }
+          KeyName: { get_param: KeyName }
+          stack_name: { get_param: stack_name }
           pnda_private_network: { get_param: pnda_private_network }
           pnda_private_subnet: { get_param: pnda_private_subnet }
-          volume_size: { get_param: DatanodeVolumeSize }
-          cluster_name: { get_param: deployment_name }
           pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
-          pnda_flavor: { get_param: PndaFlavor }
-
+          pnda_security_group_kafka_ingest: { get_param: pnda_security_group_kafka_ingest }
+          NodeIndex: '%index%'
+          pnda_ingest_network: { get_param: pnda_ingest_network }
+          pnda_ingest_subnet: { get_param: pnda_ingest_subnet }
+          LogVolumeSize: { get_param: LogVolumeSize }
+          name:
+            str_replace:
+              template: '%stackname%-kafka-%index%'
+              params:
+                '%stackname%': { get_param: stack_name }
   opentsdb:
     type: OS::Heat::ResourceGroup
     properties:
@@ -430,26 +323,42 @@ resources:
       resource_def:
         type: OS::Pnda::opentsdb
         properties:
-          signal_transport: { get_param: signal_transport }
-          software_config_transport: { get_param: software_config_transport }
           Flavor: { get_param: OpentsdbFlavor }
           Image: { get_param: image_id }
           KeyName: { get_param: KeyName }
+          stack_name: { get_param: stack_name }
+          pnda_private_network: { get_param: pnda_private_network }
+          pnda_private_subnet: { get_param: pnda_private_subnet }
+          pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+          NodeIndex: '%index%'
+          LogVolumeSize: { get_param: LogVolumeSize }
           name:
             str_replace:
               template: '%stackname%-opentsdb-%index%'
               params:
-                '%stackname%': { get_param: deployment_name }
-          NodeIndex: '%index%'
+                '%stackname%': { get_param: stack_name }
+
+  zookeeper:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: ZookeeperNodes }
+      resource_def:
+        type: OS::Pnda::zookeeper
+        properties:
+          stack_name: { get_param: stack_name }
+          Flavor: { get_param: ZookeeperFlavor }
+          Image: { get_param: image_id }
+          KeyName: { get_param: KeyName }
+          stack_name: { get_param: stack_name }
           pnda_private_network: { get_param: pnda_private_network }
           pnda_private_subnet: { get_param: pnda_private_subnet }
-          pnda_security_group_pnda : { get_param: pnda_security_group_pnda  }
-          cluster_name: { get_param: deployment_name }
-          pnda_flavor: { get_param: PndaFlavor }
-outputs:
-  zookeeper_hosts:
-    value: { get_attr: [zookeeper, hosts_entry] }
-  kafka_hosts:
-    value: { get_attr: [kafka, hosts_entry] }
-  tools_hosts:
-    value: { get_attr: [tools, hosts_entry] }
+          pnda_security_group_pnda: { get_param: pnda_security_group_pnda }
+          NodeIndex: '%index%'
+          LogVolumeSize: { get_param: LogVolumeSize }
+          name:
+            str_replace:
+              template: '%stackname%-zookeeper-%index%'
+              params:
+                '%stackname%': { get_param: stack_name }
+
+

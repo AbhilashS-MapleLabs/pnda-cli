@@ -38,10 +38,13 @@ class HeatTemplateBackend(BaseBackend):
         password=self._pnda_env['openstack_parameters']['KEYSTONE_PASSWORD']
         auth_url=self._pnda_env['openstack_parameters']['KEYSTONE_AUTH_URL']
         if int(self._pnda_env['openstack_parameters']['KEYSTONE_AUTH_VERSION']) == 2:
-            print "Inside v2 check:"
+            CONSOLE.info('Auth version provided is v2')
+            print "Auth version provided is v2"
             tenant_name=self._pnda_env['openstack_parameters']['KEYSTONE_TENANT']
             auth=v2.Password(auth_url=auth_url,username=username, password=password, tenant_name=tenant_name)
         elif int(self._pnda_env['openstack_parameters']['KEYSTONE_AUTH_VERSION']) == 3:
+            CONSOLE.info('Auth version provided is v3')
+            print "Auth version provided is v3"
             project_name=self._pnda_env['openstack_parameters']['KEYSTONE_TENANT']
             #user_domain_name=self._pnda_env['openstack_parameters']['KEYSTONE_USER']
             #project_domain_name=self._pnda_env['openstack_parameters']['KEYSTONE_USER']
@@ -56,24 +59,15 @@ class HeatTemplateBackend(BaseBackend):
         'auth': auth
         }
         return kwargs
-        # heat_session = heat_client.Client(version='1', **kwargs)
-        # return heat_session
 
     def _get_nova_session(self):
-        # Keystone authentication
+        # Returns - a nova client handle
         kwargs = self._get_keystone_session()
-        # kwargs = {
-        #     'auth_url': auth_url,
-        #     'session': keystone_session,
-        #     'auth': keystone_auth}
         return nova_client.Client(version='2', **kwargs)
 
     def _get_heat_session(self):
+        # Returns - a heat client handle
         kwargs = self._get_keystone_session()
-        # kwargs = {
-        #     'auth_url': auth_url,
-        #     'session': keystone_session,
-        #     'auth': keystone_auth}
         return heat_client.Client(version='1', **kwargs)
 
     def check_target_specific_config(self):
@@ -349,7 +343,7 @@ class HeatTemplateBackend(BaseBackend):
     def pre_destroy_pnda(self):
         CONSOLE.info('Deleting Openstack stack')
         stack_name = self._cluster
-        heat_session=self._get_keystone_session()
+        heat_session=self._get_heat_session()
         try:
             delete_status=heat_session.stacks.delete(stack_id=stack_name)
             print delete_status

@@ -3,16 +3,9 @@
 heat_template_version: 2015-04-30
 
 parameters:
-  signal_transport:
-    type: string
-    default: TEMP_URL_SIGNAL
-  software_config_transport:
-    type: string
-    default: POLL_TEMP_URL
   Flavor:
     description: Flavor of the bastion server
     type: string
-    default: ec2.t2.medium
   Image:
     type: string
   KeyName:
@@ -31,11 +24,8 @@ parameters:
     type: string
   pnda_security_group_pnda:
     type: string
-  cluster_name:
+  stack_name:
     type: string
-  pnda_flavor:
-    type: string
-    default: standard
 
 resources:
   bastion_port:
@@ -59,10 +49,10 @@ resources:
     properties:
       name: { get_param: name }
       image: { get_param: Image }
-      flavor: { get_param: Flavor}
       key_name: { get_param: KeyName }
+      flavor: { get_param: Flavor }
       metadata: {'node_type': 'bastion',
-                 'pnda_cluster': {get_param: cluster_name},
+                 'pnda_cluster': {get_param: stack_name},
                  'node_idx':'',
                  'Name': {get_param: name}}
       networks:
