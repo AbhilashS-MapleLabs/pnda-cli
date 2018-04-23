@@ -4,7 +4,6 @@
 heat_template_version: 2015-04-30
 
 parameters:
-  #keystone credentials
   privateSubnetCidr:
     type: string
     description: Private network address (CIDR notation)
@@ -58,6 +57,7 @@ resources:
       network_id: { get_resource: pnda_private_network }
       cidr: { get_param: privateSubnetCidr }
       gateway_ip: { get_param: privateSubnetGateway }
+      dns_nameservers: { get_param: dns_nameservers }
 
   # Create Kafka ingest net and subnet. All kafka nodes will be part of this network
   pnda_ingest_network:
@@ -68,6 +68,7 @@ resources:
           template: '%stackname%_ingest_network'
           params:
             '%stackname%': { get_param: 'OS::stack_name' }
+
   pnda_ingest_subnet:
     type: OS::Neutron::Subnet
     depends_on: pnda_private_network
@@ -75,7 +76,6 @@ resources:
       network_id: { get_resource: pnda_ingest_network }
       cidr: { get_param: publicProducerSubnetCidr }
       gateway_ip: { get_param: publicProducerSubnetGateway }
-      dns_nameservers: { get_param: dns_nameservers }
 
   # create a software router
   pnda_router:
