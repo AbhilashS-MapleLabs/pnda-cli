@@ -127,12 +127,13 @@ class HeatBackend(BaseBackend):
         env_file = templates_path + "/pnda_env.yaml"
         config, ind, bsi = load_yaml_guess_indent(open(env_file))
         parameters = config['parameters']
-        parameters['KeyName'] = node_counts['keyname']
+        parameters['keyName'] = node_counts['keyname']
         # remove extra parmeters for heat template
         exclude_section = [
             'INFRASTRUCTURE_TYPE',
             'SSH_KEY',
             'OS_USER',
+            'networkCidr',
             'KEYSTONE_AUTH_URL',
             'KEYSTONE_USER',
             'KEYSTONE_PASSWORD',
@@ -359,10 +360,10 @@ class HeatBackend(BaseBackend):
 
     def _generate_template_file(self, flavor, datanodes, opentsdbs, kafkas, zookeepers):
         stack_params = []
-        stack_params.append('ZookeeperNodes: {}'.format(zookeepers))
-        stack_params.append('KafkaNodes: {}'.format(kafkas))
-        stack_params.append('DataNodes: {}'.format(datanodes))
-        stack_params.append('OpentsdbNodes: {}'.format(opentsdbs))
+        stack_params.append('zookeeperNodes: {}'.format(zookeepers))
+        stack_params.append('kafkaNodes: {}'.format(kafkas))
+        stack_params.append('dataNodes: {}'.format(datanodes))
+        stack_params.append('opentsdbNodes: {}'.format(opentsdbs))
 
         resources_dir = '_resources_{}-{}'.format(flavor, self._cluster)
         dest_dir = '{}/{}'.format(os.getcwd() + '/cli', resources_dir)
