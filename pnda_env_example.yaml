@@ -74,6 +74,9 @@ openstack_parameters:
   #name_servers: DNS server(s) to use, this should be provided in the environment
   dns_nameservers: '8.8.8.8'
 
+  # CIDR specifying the address range for the public subnet (bastion access)
+  publicSubnetCidr: 10.0.0.0/24
+
 platform_salt:
   # Use either PLATFORM_GIT_REPO_URI + PLATFORM_GIT_BRANCH or PLATFORM_SALT_LOCAL
 
@@ -95,6 +98,7 @@ pnda_application_repo:
   #   s3     - AWS S3. Also set PNDA_APPS_CONTAINER, PNDA_APPS_FOLDER, PNDA_APPS_REGION, PNDA_APPS_ACCESS_KEY_ID, PNDA_APPS_SECRET_ACCESS_KEY
   #   sshfs  - standard file system. Also set PR_FS_LOCATION_PATH, PR_SSHFS_USER, PR_SSHFS_HOST, PR_SSHFS_PATH and PR_SSHFS_KEY
   #   local  - local filesystem on the package repository service server. Also set PR_FS_LOCATION_PATH.
+  #   swift  - Openstack swift. Also set PNDA_APPS_CONTAINER and PNDA_APPS_FOLDER 
   PR_FS_TYPE: s3
 
   # S3 container to use for PNDA application packages
